@@ -2,16 +2,6 @@
 
 #include <stdint.h>
 
-// -----------------------------------------------------------------------------
-// ControllerInput
-//
-// This struct is the ONLY thing that leaves the controller module. Every
-// other module (drive, arm, safety, ...) reads controller state exclusively
-// through it — none of them may include Bluepad32.h or touch a
-// ControllerPtr. That keeps Bluepad32 confined to controller_input.cpp: if
-// the controller library is ever swapped out, only that one .cpp file needs
-// to change, not every module that cares about button state.
-// -----------------------------------------------------------------------------
 struct ControllerInput {
     bool connected;
 
