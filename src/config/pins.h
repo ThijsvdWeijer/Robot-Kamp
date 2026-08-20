@@ -10,4 +10,3 @@ constexpr int SHOULDER_SERVO_PIN = 14;  // MG90S shoulder servo
 constexpr int ELBOW_SERVO_PIN = 16;     // MG90S elbow servo 
 constexpr int WRIST_SERVO_PIN = 17;     // Traxxas 2056 wrist servo
 constexpr int GRIPPER_SERVO_PIN = 18;   // MG90S gripper servo
-

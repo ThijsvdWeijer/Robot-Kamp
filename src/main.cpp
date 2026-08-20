@@ -1,6 +1,8 @@
 #include <Arduino.h>
 
+#include "arm/arm_base.h"
 #include "controller/controller_input.h"
+#include "drive/drive.h"
 
 namespace {
 
@@ -42,10 +44,14 @@ void printInput(const ControllerInput& input) {
 void setup() {
     Serial.begin(115200);
     controller_init();
+    arm_base_init();
+    drive_init();
 }
 
 void loop() {
     ControllerInput input = controller_update();
+    arm_base_update(input.armBaseLeft, input.armBaseRight);
+    drive_update(input.driveForward, input.driveBackward, input.steerAxis);
 
     if (!havePreviousInput || inputChanged(input, previousInput)) {
         printInput(input);
