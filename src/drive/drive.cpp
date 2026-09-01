@@ -50,7 +50,10 @@ void drive_update(int driveForward, int driveBackward, int steerAxis) {
     int throttlePulse = PWM_NEUTRAL_US + (netThrottle * PWM_HALF_RANGE_US) / TRIGGER_MAX;
     esc.writeMicroseconds(clampPulse(throttlePulse));
 
-    int steerPulse = PWM_NEUTRAL_US + (steerAxis * PWM_HALF_RANGE_US) / STEER_AXIS_MAX;
+    // Inverted: raw steerAxis increases rightward on the stick but the
+    // physical steering servo turns the opposite way for that pulse
+    // direction, so the sign is flipped here to match.
+    int steerPulse = PWM_NEUTRAL_US - (steerAxis * PWM_HALF_RANGE_US) / STEER_AXIS_MAX;
     steeringServo.writeMicroseconds(clampPulse(steerPulse));
 }
 

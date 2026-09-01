@@ -7,6 +7,7 @@
 #include "arm/arm_wrist.h"
 #include "controller/controller_input.h"
 #include "drive/drive.h"
+#include "safety/failsafe.h"
 
 namespace {
 
@@ -70,12 +71,17 @@ void setup() {
 
 void loop() {
     ControllerInput input = controller_update();
-    arm_base_update(input.armBaseLeft, input.armBaseRight);
-    drive_update(input.driveForward, input.driveBackward, input.steerAxis);
-    arm_shoulder_update(input.shoulderUp, input.shoulderDown);
-    arm_elbow_update(input.elbowUp, input.elbowDown);
-    arm_wrist_update(input.wristRotateA, input.wristRotateB);
-    arm_gripper_update(input.gripperOpen, input.gripperClose);
+
+    if (failsafe_check(input)) {
+        drive_update(input.driveForward, input.driveBackward, input.steerAxis);
+        arm_base_update(input.armBaseLeft, input.armBaseRight);
+        arm_shoulder_update(input.shoulderUp, input.shoulderDown);
+        arm_elbow_update(input.elbowUp, input.elbowDown);
+        arm_wrist_update(input.wristRotateA, input.wristRotateB);
+        arm_gripper_update(input.gripperOpen, input.gripperClose);
+    } else {
+        failsafe_trigger();
+    }
 
     float shoulderAngle = arm_shoulder_angle();
     float elbowAngle = arm_elbow_angle();
