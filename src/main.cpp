@@ -1,5 +1,5 @@
 #include <Arduino.h>
-
+  
 #include "arm/arm_base.h"
 #include "arm/arm_elbow.h"
 #include "arm/arm_gripper.h"
@@ -8,12 +8,12 @@
 #include "controller/controller_input.h"
 #include "drive/drive.h"
 #include "safety/failsafe.h"
-
+  
 namespace {
-
+  
 ControllerInput previousInput{};
 bool havePreviousInput = false;
-
+  
 // Joint angles are tracked separately from previousInput: while a
 // direction is held, the ControllerInput fields stay constant but the
 // angle keeps advancing every tick, so angle changes need their own
@@ -23,7 +23,7 @@ float previousElbowAngle = 0.0f;
 float previousWristAngle = 0.0f;
 float previousGripperAngle = 0.0f;
 bool haveJointAngles = false;
-
+  
 bool inputChanged(const ControllerInput& a, const ControllerInput& b) {
 
     return a.connected != b.connected ||
@@ -40,8 +40,8 @@ bool inputChanged(const ControllerInput& a, const ControllerInput& b) {
            a.wristRotateA != b.wristRotateA ||
            a.wristRotateB != b.wristRotateB ||
            a.steerAxis != b.steerAxis;
-}
-
+} 
+  
 void printInput(const ControllerInput& input) {
     Serial.printf(
         "connected=%d | L2=%4d R2=%4d | L1=%d R1=%d | "
@@ -55,9 +55,9 @@ void printInput(const ControllerInput& input) {
         input.steerAxis, static_cast<unsigned long>(input.lastUpdateMs),
         arm_shoulder_angle(), arm_elbow_angle(), arm_wrist_angle(), arm_gripper_angle());
 }
-
+  
 }  
-
+  
 void setup() {
     Serial.begin(115200);
     controller_init();
@@ -68,10 +68,10 @@ void setup() {
     arm_wrist_init();
     arm_gripper_init();
 }
-
+  
 void loop() {
     ControllerInput input = controller_update();
-
+  
     if (failsafe_check(input)) {
         drive_update(input.driveForward, input.driveBackward, input.steerAxis);
         arm_base_update(input.armBaseLeft, input.armBaseRight);
@@ -82,7 +82,7 @@ void loop() {
     } else {
         failsafe_trigger();
     }
-
+  
     float shoulderAngle = arm_shoulder_angle();
     float elbowAngle = arm_elbow_angle();
     float wristAngle = arm_wrist_angle();

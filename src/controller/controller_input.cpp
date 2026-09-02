@@ -19,7 +19,7 @@ void onDisconnectedController(ControllerPtr ctl) {
     }
 }
 
-}  // namespace
+}
 
 void controller_init() {
     BP32.setup(&onConnectedController, &onDisconnectedController);

@@ -23,17 +23,17 @@ void failsafe_trigger() {
 
     drive_stop();
     arm_base_stop();
-
-
+  
+  
     arm_shoulder_update(false, false);
     arm_elbow_update(false, false);
     arm_wrist_update(false, false);
     arm_gripper_update(false, false);
-
+  
     static uint32_t lastWarnMs = 0;
     uint32_t now = millis();
     if (now - lastWarnMs > 1000) {
         lastWarnMs = now;
         Serial.println("[FAILSAFE] No valid controller input -> neutral");
     }
-}
+} 
