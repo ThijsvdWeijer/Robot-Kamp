@@ -28,9 +28,6 @@ void controller_init() {
 ControllerInput controller_update() {
     BP32.update();
 
-    // Zero-initializing here gives every field its safe/neutral default
-    // (false / 0) up front, so the "not connected" return path below doesn't
-    // need to set each field individually.
     ControllerInput input{};
     input.lastUpdateMs = millis();
 
@@ -48,9 +45,8 @@ ControllerInput controller_update() {
     input.armBaseLeft = ctl->l1();
     input.armBaseRight = ctl->r1();
 
-    // Bluepad32 names face buttons by pad position (a/b/x/y), not by the
-    // PlayStation glyph printed on them. On a DualSense: a() = Cross.
-    input.fireRequested = ctl->a();  // Cross / X
+    input.fireRequested = ctl->a();          // Cross / X
+    input.cannonPowerButton = ctl->y();      // Triangle
 
     input.aimUp = ctl->dpad() & DPAD_UP;
     input.aimDown = ctl->dpad() & DPAD_DOWN;

@@ -14,8 +14,7 @@ void SteppedServo::update(bool increasePressed, bool decreasePressed) {
     } else if (decreasePressed && !increasePressed) {
         angle_ -= stepDegreesPerTick_;
     }
-    // Both pressed, or neither pressed: hold steady, no change.
-
+    
     angle_ = constrain(angle_, 0.0f, 180.0f);
     servo_.write(angle_);
 }
