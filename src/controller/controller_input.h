@@ -12,10 +12,11 @@ struct ControllerInput {
     bool armBaseLeft;   // L1
     bool armBaseRight;  // R1
 
-    bool fireRequested;       // Cross / X
-    bool aimUp;               // D-pad up
-    bool aimDown;             // D-pad down
-    bool cannonPowerButton;   // Triangle -- toggles the cannon's manual ON/OFF switch
+    bool feederPush;           // Circle -- jogs the feeder servo toward the push position
+    bool feederReturn;         // Cross / X -- jogs the feeder servo toward the rest position
+    bool aimUp;                // D-pad up
+    bool aimDown;              // D-pad down
+    bool cannonPowerButton;    // Triangle -- toggles the cannon's manual ON/OFF switch
 
     // Left stick X axis raw range is -511..512.
     int steerAxis;

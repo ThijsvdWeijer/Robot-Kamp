@@ -11,3 +11,4 @@ constexpr int ARM_BASE_ESC_PIN = 13;  // Titan 12T base motor ESC (PWM) -- rotat
 constexpr int FEEDER_SERVO_PIN = 14;        // MG90S ball feeder servo
 constexpr int AIM_SERVO_PIN = 16;           // MG90S barrel elevation servo
 constexpr int CANNON_POWER_SERVO_PIN = 17;  // spare MG90S, flips the manual ON/OFF toggle switch
+constexpr int CANNON_AIM_SERVO_PIN = 18;  // kies een vrije pin

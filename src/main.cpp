@@ -28,7 +28,8 @@ bool inputChanged(const ControllerInput& a, const ControllerInput& b) {
            a.driveForward != b.driveForward ||
            a.armBaseLeft != b.armBaseLeft ||
            a.armBaseRight != b.armBaseRight ||
-           a.fireRequested != b.fireRequested ||
+           a.feederPush != b.feederPush ||
+           a.feederReturn != b.feederReturn ||
            a.aimUp != b.aimUp ||
            a.aimDown != b.aimDown ||
            a.cannonPowerButton != b.cannonPowerButton ||
@@ -37,11 +38,11 @@ bool inputChanged(const ControllerInput& a, const ControllerInput& b) {
 
 void printInput(const ControllerInput& input, float aimAngle) {
     Serial.printf(
-        "connected=%d | L2=%4d R2=%4d | L1=%d R1=%d | fire=%d aimU=%d aimD=%d pwrBtn=%d | "
+        "connected=%d | L2=%4d R2=%4d | L1=%d R1=%d | push=%d ret=%d aimU=%d aimD=%d pwrBtn=%d | "
         "steer=%4d | t=%lu | aim=%.1f | feederIdle=%d | cannonPower=%d\n",
         input.connected, input.driveBackward, input.driveForward,
         input.armBaseLeft, input.armBaseRight,
-        input.fireRequested, input.aimUp, input.aimDown, input.cannonPowerButton,
+        input.feederPush, input.feederReturn, input.aimUp, input.aimDown, input.cannonPowerButton,
         input.steerAxis, static_cast<unsigned long>(input.lastUpdateMs),
         aimAngle, cannon_feeder_is_idle(), cannon_power_is_on());
 }
@@ -67,7 +68,7 @@ void loop() {
         drive_update(input.driveForward, input.driveBackward, input.steerAxis);
         arm_base_update(input.armBaseLeft, input.armBaseRight);
         cannon_aim_update(input.aimUp, input.aimDown);
-        cannon_feeder_update(input.fireRequested);
+        cannon_feeder_update(input.feederPush, input.feederReturn);
         cannon_power_update(input.cannonPowerButton);
     } else {
         // failsafe_trigger() forces the switch OFF and the feeder to rest

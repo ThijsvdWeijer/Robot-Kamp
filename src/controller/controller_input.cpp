@@ -45,8 +45,12 @@ ControllerInput controller_update() {
     input.armBaseLeft = ctl->l1();
     input.armBaseRight = ctl->r1();
 
-    input.fireRequested = ctl->a();          // Cross / X
-    input.cannonPowerButton = ctl->y();      // Triangle
+    // Bluepad32 names face buttons by pad position (a/b/x/y), not by the
+    // PlayStation glyph printed on them. On a DualSense: a() = Cross,
+    // b() = Circle, y() = Triangle.
+    input.feederPush = ctl->b();          // Circle
+    input.feederReturn = ctl->a();        // Cross / X
+    input.cannonPowerButton = ctl->y();   // Triangle
 
     input.aimUp = ctl->dpad() & DPAD_UP;
     input.aimDown = ctl->dpad() & DPAD_DOWN;

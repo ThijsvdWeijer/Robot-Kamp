@@ -7,8 +7,8 @@
 
 namespace {
 
-constexpr int POWER_OFF_ANGLE = 0;
-constexpr int POWER_ON_ANGLE = 180;
+constexpr int POWER_OFF_ANGLE = 180;
+constexpr int POWER_ON_ANGLE = 70;
 
 Servo powerServo;
 bool isOn = false;

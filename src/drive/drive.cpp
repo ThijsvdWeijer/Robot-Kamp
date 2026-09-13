@@ -6,7 +6,7 @@
 
 namespace {
 
-    constexpr int PWM_NEUTRAL_US = 1500;
+constexpr int PWM_NEUTRAL_US = 1500;
 constexpr int PWM_MIN_US = 1000;
 constexpr int PWM_MAX_US = 2000;
 constexpr int PWM_HALF_RANGE_US = 500;
