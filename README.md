@@ -1,24 +1,24 @@
 # Robot-Kamp
 
-ESP32 (Arduino/PlatformIO) firmware for an RC car with a 4-DOF arm bolted on top, controlled by a PS5 DualSense over Bluetooth via [Bluepad32](https://github.com/ricardoquesada/bluepad32).
+ESP32 (Arduino/PlatformIO) firmware for an RC car with a rotating base and a servo-actuated cannon (string-tensioned firing mechanism) bolted on top, controlled by a PS5 DualSense over Bluetooth via [Bluepad32](https://github.com/ricardoquesada/bluepad32).
 
 ## Architecture
 
 Each concern lives in its own module. `main.cpp` is the only place that wires them together.
 
 ```
-controller_input  ->  ControllerInput struct  ->  failsafe (gate) ->  drive / arm_base / arm_shoulder / arm_elbow / arm_wrist / arm_gripper
+controller_input  ->  ControllerInput struct  ->  failsafe (gate) ->  drive / arm_base / cannon_fire
 ```
 
 - **`controller/controller_input`** — the only module that talks to Bluepad32 directly. Reads the gamepad and returns a plain `ControllerInput` struct (booleans and ints). Every other module only ever sees this struct's fields, never Bluepad32 types — swapping controller libraries later means touching only this module.
 - **`drive`** — Traxxas XL-5 ESC (throttle/brake) + Traxxas 2056 steering servo. Takes plain `driveForward`/`driveBackward`/`steerAxis` ints, knows nothing about triggers or sticks.
-- **`arm/arm_base`** — Titan 12T base rotation motor via its own ESC. Continuous rotation, no position to track — just spin left / spin right / stop.
-- **`util/stepped_servo`** — shared logic for a servo that holds an angle (0-180°) and steps it up/down while a direction is held. Used by the four joint modules below.
-- **`arm/arm_shoulder`, `arm/arm_elbow`, `arm/arm_wrist`, `arm/arm_gripper`** — thin wrappers, each owning one `SteppedServo` instance. Take plain up/down-style booleans, expose `_update()` and `_angle()`.
+- **`base/arm_base`** — Titan 12T base rotation motor via its own ESC. Continuous rotation, no position to track — just spin left / spin right / stop.
+- **`cannon/cannon_fire`** — the fire/reload state machine for the 4-servo firing mechanism. See [Cannon fire/reload sequence](#cannon-firereload-sequence) below.
 - **`safety/failsafe`** — the gatekeeper. Every `loop()`, decides whether the current input is trustworthy (`failsafe_check`) and, if not, forces every actuator into a safe state (`failsafe_trigger`) instead of letting `main.cpp` act on it.
 - **`config/pins.h`** — every pin number in the project, in one place. No other module hardcodes a pin.
+- **`util/stepped_servo`** — leftover from a previous joint-arm version of this project. Nothing currently includes it; see [Known issues](#known-issues--cleanup-todo).
 
-None of the actuator modules (`drive`, `arm_base`, the joint modules) know where their input came from or whether it's safe — they just do what they're told. `main.cpp` and `failsafe` are the only places that make that judgment call.
+None of the actuator modules (`drive`, `arm_base`, `cannon_fire`) know where their input came from or whether it's safe — they just do what they're told. `main.cpp` and `failsafe` are the only places that make that judgment call.
 
 ## Controller mapping
 
@@ -29,10 +29,8 @@ None of the actuator modules (`drive`, `arm_base`, the joint modules) know where
 | Left stick X | `steerAxis` | drive (steering) |
 | L1 | `armBaseLeft` | arm_base (spin left) |
 | R1 | `armBaseRight` | arm_base (spin right) |
-| D-pad up / down | `shoulderUp` / `shoulderDown` | arm_shoulder |
-| D-pad left / right | `gripperOpen` / `gripperClose` | arm_gripper |
-| Triangle / Cross | `elbowUp` / `elbowDown` | arm_elbow |
-| Square / Circle | `wristRotateA` / `wristRotateB` | arm_wrist |
+| Cross / X | `fireRequested` | cannon_fire (fire) |
+| Triangle | `reloadRequested` | cannon_fire (start reload sequence) |
 
 Note: Bluepad32 names face buttons by pad position, not the PS glyph — `a()` = Cross, `b()` = Circle, `x()` = Square, `y()` = Triangle. See `controller_input.cpp` for the raw mapping.
 
@@ -40,41 +38,73 @@ Note: Bluepad32 names face buttons by pad position, not the PS glyph — `a()` =
 
 | Pin | Assignment | Status |
 |---|---|---|
-| GPIO 26 | ESC (drive) | confirmed, tested |
-| GPIO 27 | Steering servo (drive) | confirmed, tested |
-| GPIO 13 | Arm base ESC (Titan 12T) | provisional |
-| GPIO 14 | Shoulder servo (MG90S) | provisional |
-| GPIO 16 | Elbow servo (MG90S) | provisional |
-| GPIO 17 | Wrist servo (Traxxas 2056) | provisional |
-| GPIO 18 | Gripper servo (MG90S) | provisional |
+| GPIO 26 | ESC (drive throttle/brake) | working |
+| GPIO 27 | Steering servo (drive) | **broken — see Known issues** |
+| GPIO 13 | Arm base ESC (Titan 12T) | wired, spin speeds still provisional |
+| GPIO 14 | Servo 1 — firing pin (DOWN/UP) | tuned on real mechanism |
+| GPIO 16 | Servo 2 — firing support (DOWN/UP) | tuned on real mechanism |
+| GPIO 17 | Servo 3 — spool control (SET/RELEASED) | tuned on real mechanism |
+| GPIO 25 | Servo 4 — LEGO motor direction switch (OFF/ON) | tuned on real mechanism |
 
-Provisional pins were picked from the ESP32-WROOM-32 safe GPIO list (no strapping/input-only/flash pins): G13, G14, G16, G17, G18, G19, G21, G22, G23, G25, G32, G33. G19/G21 are left free as spares.
+## Cannon fire/reload sequence
+
+`cannon_fire` runs a small state machine, driven from `loop()` via `cannon_fire_update(fireRequested, reloadRequested)`:
+
+```
+Loaded --fire()--> Fired --startReload()--> Reloading --...--> Loaded
+```
+
+While `Reloading`, `reloadStep` walks through, each step timed off `millis()` (never a blocking `delay()`, so the controller/failsafe keep being polled throughout):
+
+```
+SettingSpool -> SpoolSettling -> MotorRunning -> Locking -> MotorStopping -> MotorOffSettling -> ReleasingSpool
+```
+
+All calibration angles and step timings are tunable constants at the top of `cannon_fire.cpp`:
+
+| Constant | Meaning |
+|---|---|
+| `SERVO1_DOWN` / `SERVO1_UP` | Firing pin: locked / fired position |
+| `SERVO2_DOWN` / `SERVO2_UP` | Firing support: always moves in lockstep with Servo 1 |
+| `SERVO3_SET` / `SERVO3_RELEASED` | Spool control positions |
+| `SERVO4_OFF` / `SERVO4_ON` | LEGO motor direction-switch positions |
+| `RELOAD_MOTOR_TIME_MS` | How long the motor pulls during `MotorRunning` |
+| `SPOOL_SETTLE_TIME_MS` | Delay between setting the spool and switching the motor on |
+| `LOCK_SETTLE_TIME_MS` | Delay between the firing pin locking and cutting motor power |
+| `MOTOR_OFF_SETTLE_TIME_MS` | Delay between switching the motor off and releasing the spool |
+
+Both `fireRequested` and `reloadRequested` are ignored while `Reloading` — the sequence always runs to completion uninterrupted.
 
 ## Building and flashing
 
-Two PlatformIO environments, isolated via `build_src_filter` so they never compile against each other:
+Two PlatformIO environments, isolated via `build_src_filter` so they never compile against each other (PlatformIO 6.x only supports one project-wide `src_dir`, so a per-environment `src_dir` isn't an option — see the comments in `platformio.ini`):
 
 ```bash
 # Real robot firmware (src/main.cpp + all modules)
 pio run -e esp32dev -t upload
 pio device monitor
 
-# Standalone single-servo bench test (src/servo_test/main.cpp)
+# Per-servo controller jog test for the 4 cannon servos (src/servo_test/main.cpp)
 pio run -e servo_test -t upload
 pio device monitor
 ```
 
-`servo_test` has no Bluepad32/controller dependency — it's plain Arduino + ESP32Servo, used to sanity-check a servo's range, direction, and smoothness before it's ever wired into the real arm modules. Set `SERVO_PIN` at the top of `src/servo_test/main.cpp` to whichever pin you're testing.
+`servo_test` still needs the DualSense controller (it uses Bluepad32 just like the real firmware) but nothing else — no drive/arm_base/cannon_fire/failsafe dependency. Each face button toggles one servo between its two calibrated positions, so you can jog one joint at a time before trusting it in the automatic reload sequence:
 
-## Tuning the arm
+| Button | Servo |
+|---|---|
+| Cross / X | Servo 1 — firing pin |
+| Circle | Servo 2 — firing support |
+| Square | Servo 3 — spool control |
+| Triangle | Servo 4 — motor switch |
 
-**Speed (shoulder/elbow/wrist/gripper):** the `stepDegreesPerTick` argument to `.attach()` in each joint's `_init()` (currently `1.10f` in all four) — bigger = faster.
+## Tuning
 
-**Direction (shoulder/elbow/wrist/gripper):** if a joint moves opposite of what's expected, swap the two arguments passed into the internal `SteppedServo::update()` call in that joint's `_update()` function (e.g. `shoulderServo.update(down, up)` instead of `(up, down)`).
+**Cannon servo angles/timings:** the constants block at the top of `cannon_fire.cpp` (see table above).
 
-**Speed (arm base):** `ESC_SPIN_LEFT_US` / `ESC_SPIN_RIGHT_US` in `arm_base.cpp` (currently 1450/1550µs, ±50µs off the 1500µs neutral) — move further from neutral for more speed. Watch for the ESC's deadband near neutral.
+**Arm base speed:** `ESC_SPIN_LEFT_US` / `ESC_SPIN_RIGHT_US` in `arm_base.cpp` — still conservative placeholder values, never tuned against real load (see Known issues).
 
-**Direction (arm base):** swap `ESC_SPIN_LEFT_US`/`ESC_SPIN_RIGHT_US`, or swap which branch of `arm_base_update()` writes which value.
+**Arm base direction:** swap `ESC_SPIN_LEFT_US`/`ESC_SPIN_RIGHT_US`, or swap which branch of `arm_base_update()` writes which value.
 
 **Steering direction (drive):** sign of `steerAxis` in the pulse calculation in `drive.cpp`.
 
@@ -82,11 +112,20 @@ pio device monitor
 
 `failsafe_check()` fails (returns unsafe) when the controller is disconnected, or when `input.lastUpdateMs` is older than `FAILSAFE_TIMEOUT_MS` (300ms). On trigger:
 
-- **Velocity actuators** (drive, arm_base) are force-stopped — they have no position to preserve.
-- **Position actuators** (the four joints) are held in place by calling their `_update()` with `(false, false)` — never forced to a hardcoded angle, since that could slam the arm into something.
+- **Drive and arm_base** are force-stopped to neutral — they have no position to preserve.
+- **cannon_fire** is still ticked forward with `(false, false)` — an in-progress reload keeps running to completion rather than being aborted mid-sequence, since stopping partway could leave the mechanism in an unsafe half-locked state.
+
+## Known issues / cleanup TODO
+
+- **Dead code in the cannon module.** `cannon_fire_fire.cpp`, `cannon_fire_reload.cpp`, and `cannon_fire_internal.h` define a second copy of `fire()`/`startReload()`/`updateReload()` at global scope, matching an `extern` split that was never finished. The functions that actually run are private (anonymous-namespace) copies defined directly inside `cannon_fire.cpp`; the split files are never called and the build only stays green because the linker garbage-collects them. Any edit made only to the split files currently has zero effect on behavior. Needs a decision: finish the split (move the real implementation into them) or delete them.
+- **`util/stepped_servo.{h,cpp}` is unused.** Leftover from a previous joint-arm version of this project — nothing currently includes it.
+- **Steering (GPIO 27) is currently non-functional**, and was observed to make the ESP32 run hot while steering was unresponsive — suspected hardware fault (servo stall, short, or wiring issue) rather than a firmware bug, since `drive.cpp`'s steering logic hasn't changed. Do not run the car until this is resolved; investigate the steering servo and its wiring before assuming a code cause.
+- **Firing pin (Servo 1) can stall/slip** when trying to lock against a fully-tensioned string with the push bar seated at the back of the barrel — a torque/leverage limitation on that joint rather than a sequencing bug (locking at full tension is required by the mechanical design, so the firmware can't avoid the load by reordering steps). See linkage geometry / servo torque / re-zeroing a slipped horn.
 
 ## Status
 
-- ✅ Controller input, pin config, drive, stepped-servo utility — built and tested.
-- ✅ Four arm joint modules, arm_base, failsafe — built, wired into `main.cpp`, logic-tested via serial (no ControllerInput/Bluepad32 dependency issues).
-- ⏳ Arm hardware (servos, Titan motor + ESC) still being physically wired/tuned — pin assignments and PWM speed constants are provisional until confirmed on real hardware.
+- ✅ Controller input, pin config, drive throttle, failsafe, cannon fire/reload state machine — built, tuned on real hardware where noted above.
+- ✅ Per-servo controller jog tool (`servo_test` env) for bringing up/re-testing individual cannon servos.
+- ⚠️ Drive steering — broken, suspected hardware fault (see Known issues).
+- ⏳ Arm base spin speeds — wired but still provisional, not yet tuned against real load.
+- ⚠️ Firing-pin lock-under-tension step is a known mechanical failure point (see Known issues).
