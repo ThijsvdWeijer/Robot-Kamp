@@ -33,10 +33,10 @@ struct JogServo {
 // (DOWN/UP, SET/RELEASED, OFF/ON) so this test exercises each servo's actual
 // working range. Adjust here if you just want a generic sweep instead.
 JogServo servos[4] = {
-    {"Servo 1 (firing pin)",     FIRING_PIN_SERVO_PIN,     70, 180},
-    {"Servo 2 (firing support)", FIRING_SUPPORT_SERVO_PIN, 140, 180},
+    {"Servo 1 (firing pin)",     FIRING_PIN_SERVO_PIN,     140, 180},
+    {"Servo 2 (firing support)", FIRING_SUPPORT_SERVO_PIN, 70, 180},
     {"Servo 3 (spool control)",  SPOOL_SERVO_PIN,          130, 0},
-    {"Servo 4 (motor switch)",   MOTOR_SWITCH_SERVO_PIN,   90, 180},
+    {"Servo 4 (motor switch)",   MOTOR_SWITCH_SERVO_PIN,   165, 180},
 };
 
 ControllerPtr connectedController = nullptr;

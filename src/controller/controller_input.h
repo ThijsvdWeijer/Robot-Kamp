@@ -5,7 +5,6 @@
 struct ControllerInput {
     bool connected;
 
-    // L2 / R2 trigger depth range is 0 (not pressed) to 1023 (fully pressed).
     int driveBackward;  // L2 (brake)
     int driveForward;   // R2 (throttle)
 

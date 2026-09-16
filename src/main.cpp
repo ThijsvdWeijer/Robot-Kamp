@@ -5,6 +5,7 @@
 #include "controller/controller_input.h"
 #include "drive/drive.h"
 #include "safety/failsafe.h"
+#include "status/status_led.h"
 
 namespace {
 
@@ -66,6 +67,7 @@ void setup() {
     drive_init();
     arm_base_init();
     cannon_fire_init();
+    status_led_init();
 }
 
 void loop() {
@@ -83,6 +85,7 @@ void loop() {
 
     CannonState cannonState = cannon_fire_get_state();
     ReloadStep reloadStep = cannon_fire_get_reload_step();
+    status_led_update(cannonState);
 
     bool stateChanged = !havePreviousInput || inputChanged(input, previousInput) ||
                          !haveCannonState || cannonState != previousCannonState ||

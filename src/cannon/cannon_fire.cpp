@@ -5,17 +5,17 @@
 
 #include "config/pins.h"
 
-int SERVO1_DOWN = 180;
-int SERVO1_UP   = 60;
+int SERVO1_DOWN = 140;
+int SERVO1_UP   = 180;
 
-int SERVO2_DOWN = 140;
-int SERVO2_UP   = 180;
+int SERVO2_DOWN = 180;
+int SERVO2_UP   = 70;
 
 int SERVO3_SET      = 130;
 int SERVO3_RELEASED = 0;
 
-int SERVO4_OFF = 90;
-int SERVO4_ON  = 180;
+int SERVO4_OFF = 180;
+int SERVO4_ON  = 165;
 
 
 int RELOAD_MOTOR_TIME_MS = 4500;

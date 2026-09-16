@@ -6,15 +6,11 @@
 
 namespace {
 
-// Standard RC PWM range for this ESC, in microseconds.
 constexpr int ESC_NEUTRAL_US = 1500;
 
-// Fixed spin speeds. Modest values, not full-scale (1000/2000us), until the
-// arm is physically wired and these can be tuned against real load.
 constexpr int ESC_SPIN_LEFT_US = 1380;
 constexpr int ESC_SPIN_RIGHT_US = 1620;
 
-// How long to hold neutral at startup before the ESC is considered armed.
 constexpr int ESC_ARM_DELAY_MS = 1000;
 
 Servo baseEsc;
